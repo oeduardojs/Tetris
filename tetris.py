@@ -113,10 +113,12 @@ screen = pygame.display.set_mode((300, 600))
 clock = pygame.time.Clock()
 game = Tetris(10, 20)
 
+background_image = pygame.image.load('image.jpg')
+
 # Loop principal do jogo
 running = True
 while running:
-    screen.fill(GRAFITE)
+    screen.blit(background_image, (0, 0))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:

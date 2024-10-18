@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #eee;
+        }
+        canvas {
+            background: #fff;
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="tetris"></canvas>
+
+    <audio id="backgroundMusic" src="tetris.mp3" preload="auto"></audio>
+
+    <script>
+        const canvas = document.getElementById("tetris");
+        const context = canvas.getContext("2d");
+        canvas.width = 300;
+        canvas.height = 600;
+
+        const backgroundImage = new Image();
+        backgroundImage.src = 'image.jpg'; // Substitua pelo caminho da sua imagem
+
+        const GRAFITE = "rgb(60, 60, 60)";
+        const PRETO = "rgb(0, 0, 0)";
+        const CORES = ["red", "green", "blue", "yellow", "orange", "purple", "cyan"];
+
+        const SHAPES = [
+            [[1, 1, 1, 1]],
+            [[1, 1], [1, 1]],
+            [[1, 1, 1], [0, 1, 0]],
+            [[1, 1, 0], [0, 1, 1]],
+            [[0, 1, 1], [1, 1, 0]],
+            [[1, 1, 1], [1, 0, 0]],
+            [[1, 1, 1], [0, 0, 1]]
+        ];
+
+        function rotateShape(shape) {
+            return shape[0].map((_, index) => shape.map(row => row[index]).reverse());
+        }
+
+        class Piece {
+            constructor(shape, color) {
+                this.shape = shape;
+                this.color = color;
+                this.x = 3;
+                this.y = 0;
+            }
+        }
+
+        class Tetris {
+            constructor(width, height) {
+                this.width = width;
+                this.height = height;
+                this.board = Array.from({ length: height }, () => Array(width).fill(0));
+                this.piece = this.getNewPiece();
+                this.gameOver = false;
+            }
+
+            getNewPiece() {
+                const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+                const color = CORES[Math.floor(Math.random() * CORES.length)];
+                const newPiece = new Piece(shape, color);
+                if (!this.validPosition(newPiece.shape, newPiece.x, newPiece.y)) {
+                    this.gameOver = true;
+                }
+                return newPiece;
+            }
+
+            validPosition(shape, offsetX, offsetY) {
+                for (let y = 0; y < shape.length; y++) {
+                    for (let x = 0; x < shape[y].length; x++) {
+                        if (shape[y][x] && (
+                            x + offsetX < 0 ||
+                            x + offsetX >= this.width ||
+                            y + offsetY >= this.height ||
+                            this.board[y + offsetY][x + offsetX]
+                        )) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+            freezePiece() {
+                this.piece.shape.forEach((row, y) => {
+                    row.forEach((cell, x) => {
+                        if (cell) {
+                            this.board[y + this.piece.y][x + this.piece.x] = this.piece.color;
+                        }
+                    });
+                });
+                this.clearLines();
+                this.piece = this.getNewPiece();
+                document.getElementById("backgroundMusic").play(); // Reproduz o áudio
+            }
+
+            clearLines() {
+                this.board = this.board.filter(row => row.some(cell => cell === 0));
+                while (this.board.length < this.height) {
+                    this.board.unshift(Array(this.width).fill(0));
+                }
+            }
+
+            movePiece(dx, dy) {
+                if (this.validPosition(this.piece.shape, this.piece.x + dx, this.piece.y + dy)) {
+                    this.piece.x += dx;
+                    this.piece.y += dy;
+                    return true;
+                }
+                return false;
+            }
+
+            rotatePiece() {
+                const rotatedShape = rotateShape(this.piece.shape);
+                if (this.validPosition(rotatedShape, this.piece.x, this.piece.y)) {
+                    this.piece.shape = rotatedShape;
+                }
+            }
+        }
+
+        function drawBlock(color, x, y) {
+            context.fillStyle = PRETO;
+            context.fillRect(x, y, 30, 30);
+            context.fillStyle = color;
+            context.fillRect(x + 3, y + 3, 24, 24);
+        }
+
+        const game = new Tetris(10, 20);
+        let interval;
+
+        function update() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+            game.movePiece(0, 1) || game.freezePiece();
+            
+            game.board.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        drawBlock(cell, x * 30, y * 30);
+                    }
+                });
+            });
+
+            game.piece.shape.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        drawBlock(game.piece.color, (game.piece.x + x) * 30, (game.piece.y + y) * 30);
+                    }
+                });
+            });
+
+            if (game.gameOver) {
+                clearInterval(interval);
+                alert("Game Over");
+            }
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowLeft") game.movePiece(-1, 0);
+            if (event.key === "ArrowRight") game.movePiece(1, 0);
+            if (event.key === "ArrowDown") game.movePiece(0, 1);
+            if (event.key === "ArrowUp") game.rotatePiece();
+        });
+
+        backgroundImage.onload = () => {
+            interval = setInterval(update, 1000);
+            document.getElementById("backgroundMusic").play(); // Reproduz o áudio ao iniciar o jogo
+        };
+    </script>
+</body>
+</html>
